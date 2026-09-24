@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credit Card Fraud Detection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            max-width: 700px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .form-section {
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+            font-size: 16px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.1);
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .features-grid .form-group {
+            margin-bottom: 0;
+        }
+        
+        .features-grid label {
+            font-size: 13px;
+        }
+        
+        .features-grid input {
+            padding: 8px;
+            font-size: 13px;
+        }
+        
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 5px;
+            text-align: center;
+            display: none;
+        }
+        
+        .result.fraud {
+            background: #fee;
+            border: 2px solid #f00;
+            color: #c00;
+        }
+        
+        .result.legitimate {
+            background: #efe;
+            border: 2px solid #0f0;
+            color: #0c0;
+        }
+        
+        .result h2 {
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        
+        .result p {
+            margin: 5px 0;
+            font-size: 16px;
+        }
+        
+        .result .probability {
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            color: #667eea;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            color: #c00;
+            padding: 10px;
+            background: #fee;
+            border-radius: 5px;
+            margin-top: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛡️ Fraud Detection</h1>
+        <p class="subtitle">Check if a credit card transaction is fraudulent</p>
+        
+        <form id="predictionForm">
+            <!-- Basic Info Section -->
+            <div class="form-section">
+                <div class="section-title">Transaction Information</div>
+                
+                <div class="form-group">
+                    <label for="amount">Amount ($) *</label>
+                    <input type="number" id="amount" name="Amount" placeholder="e.g., 150.50" step="0.01" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="time">Time (seconds) *</label>
+                    <input type="number" id="time" name="Time" placeholder="e.g., 1000" required>
+                </div>
+            </div>
+            
+            <!-- Features Section -->
+            <div class="form-section">
+                <div class="section-title">Transaction Features (V1-V28)</div>
+                <p style="font-size: 12px; color: #999; margin-bottom: 15px;">Enter anonymized feature values (default: 0)</p>
+                
+                <div class="features-grid">
+                    <div class="form-group">
+                        <label for="v1">V1</label>
+                        <input type="number" id="v1" name="V1" placeholder="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="v2">V2</label>
+                        <input type="number" id="v2" name="V2" placeholder="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="v3">V3</label>
+                        <input type="number" id="v3" name="V3" placeholder="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="v4">V4</label>
+                        <input type="number" id="v4" name="V4" placeholder="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="v5">V5</label>
+                        <input type="number" id="v5" name="V5" placeholder="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="v6">V6</label>
+                        <input type="number" id="v6" name="V6" placeholder="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="v7">V7</label>
+                        <input type="number" id="v7" name="V7" placeholder="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="v8">V8</label>
+                        <input type="number" id="v8" name="V8" placeholder="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="v9">V9</label>
+                        <input type="number" id="v9" name="V9" placeholder="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="v10">V10</label>
+                        <input type="number" id="v10" name="V10" placeholder="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="v11">V11</label>
+                        <input type="number" id="v11" name="V11" placeholder="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="v12">V12</label>
+                        <input type="number" id="v12" name="V12" placeholder="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="v13">V13</label>
+                        <input type="number" id="v13" name="V13" placeholder="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="v14">V14</label>
+                        <input type="number" id="v14" name="V14" placeholder="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="v15">V15</label>
+                        <input type="number" id="v15" name="V15" placeholder="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="v16">V16</label>
+                        <input type="number" id="v16" name="V16" placeholder="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="v17">V17</label>
+                        <input type="number" id="v17" name="V17" placeholder="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="v18">V18</label>
+                        <input type="number" id="v18" name="V18" placeholder="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="v19">V19</label>
+                        <input type="number" id="v19" name="V19" placeholder="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="v20">V20</label>
+                        <input type="number" id="v20" name="V20" placeholder="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="v21">V21</label>
+                        <input type="number" id="v21" name="V21" placeholder="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="v22">V22</label>
+                        <input type="number" id="v22" name="V22" placeholder="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="v23">V23</label>
+                        <input type="number" id="v23" name="V23" placeholder="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="v24">V24</label>
+                        <input type="number" id="v24" name="V24" placeholder="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="v25">V25</label>
+                        <input type="number" id="v25" name="V25" placeholder="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="v26">V26</label>
+                        <input type="number" id="v26" name="V26" placeholder="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="v27">V27</label>
+                        <input type="number" id="v27" name="V27" placeholder="0" step="0.01" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="v28">V28</label>
+                        <input type="number" id="v28" name="V28" placeholder="0" step="0.01" value="0">
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit">Check Transaction</button>
+        </form>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Analyzing transaction...</p>
+        </div>
+        
+        <div class="result" id="result"></div>
+        <div class="error" id="error"></div>
+    </div>
+    
+    <script>
+        // Handle form submission
+        document.getElementById('predictionForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Show loading spinner
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('error').style.display = 'none';
+            
+            // Collect form data
+            const formData = new FormData(this);
+            const data = {};
+            
+            for (let [key, value] of formData.entries()) {
+                data[key] = parseFloat(value);
+            }
+            
+            try {
+                // Send prediction request
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                // Hide loading
+                document.getElementById('loading').style.display = 'none';
+                
+                if (result.success) {
+                    // Show result
+                    const resultDiv = document.getElementById('result');
+                    const isFraud = result.fraud === 'Yes';
+                    
+                    resultDiv.className = 'result ' + (isFraud ? 'fraud' : 'legitimate');
+                    resultDiv.innerHTML = `
+                        <h2>${isFraud ? '⚠️ FRAUD DETECTED' : '✓ LEGITIMATE'}</h2>
+                        <p>${result.message}</p>
+                        <div class="probability">
+                            Confidence: ${result.confidence}%
+                        </div>
+                    `;
+                    resultDiv.style.display = 'block';
+                } else {
+                    // Show error
+                    document.getElementById('error').textContent = 'Error: ' + result.error;
+                    document.getElementById('error').style.display = 'block';
+                }
+            } catch (error) {
+                // Hide loading
+                document.getElementById('loading').style.display = 'none';
+                
+                // Show error
+                document.getElementById('error').textContent = 'Error: ' + error.message;
+                document.getElementById('error').style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
